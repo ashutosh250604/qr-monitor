@@ -1,0 +1,23 @@
+name: Scheduled QR Flag Check
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  run-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call run-check endpoint
+        env:
+          JOB_SECRET: ${{ secrets.JOB_SECRET }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          echo "Calling run-check..."
+          status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${BACKEND_URL}/api/run-check" -H "x-job-secret: ${JOB_SECRET}")
+          echo "HTTP status: $status"
+          if [ "$status" -ne 200 ]; then
+            echo "Run-check failed with status $status"
+            exit 1
+          fi

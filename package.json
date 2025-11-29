@@ -1,0 +1,14 @@
+{
+  "name": "qr-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "mongoose": "^7.6.0",
+    "qrcode": "^1.5.1",
+    "nanoid": "^4.0.0"
+  }
+}
