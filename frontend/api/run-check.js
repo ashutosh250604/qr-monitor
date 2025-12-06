@@ -1,8 +1,12 @@
-// api/run-check.js
+// frontend/api/run-check.js
 const { connect } = require('./_db');
 const QR = require('./models/QR');
+const { setCorsHeaders, handlePreflight } = require('./_cors');
 
 module.exports = async (req, res) => {
+  setCorsHeaders(res, '*');
+  if (handlePreflight(req, res)) return;
+
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
 
   const secret = req.headers['x-job-secret'];
@@ -27,6 +31,6 @@ module.exports = async (req, res) => {
     return res.json({ ok: true, checked: active.length, flagged: flaggedCount });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'server error' });
+    return res.status(500).json({ error: 'server error', details: err.message });
   }
 };

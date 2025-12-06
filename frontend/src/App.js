@@ -1,8 +1,8 @@
-// frontend/src/App.js
 import React, { useState, useEffect } from "react";
 import "./App.css";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "https://qr-monitor.vercel.app";
+// Use relative API base by default to avoid cross-origin issues in preview deployments
+const API_BASE = process.env.REACT_APP_API_BASE || "";
 
 function formatDateIsoToDDMMYYYY(iso) {
   if (!iso) return "";
@@ -48,7 +48,11 @@ export default function App() {
       const res = await fetch(`${API_BASE}/api/qrs`);
       if (!res.ok) throw new Error("Failed to load list");
       const data = await res.json();
-      setList(data);
+      // handle both legacy array and new {ok:true, docs:[]} formats
+      if (Array.isArray(data)) setList(data);
+      else if (data.ok && data.docs) setList(data.docs);
+      else if (data.ok && data.doc) setList([data.doc]);
+      else setList([]);
     } catch (err) {
       console.error(err);
       setError("Could not load QR list");
@@ -94,7 +98,9 @@ export default function App() {
       }
 
       const data = await res.json();
-      setGenerated(data);
+      // new format: { ok: true, doc: { ... } }
+      const doc = (data && data.doc) ? data.doc : data;
+      setGenerated(doc);
 
       // reset the form (as requested)
       setCompanyName("");
@@ -102,7 +108,7 @@ export default function App() {
       setContact("");
       setPurpose("");
 
-      // reload list to show the new QR (without showing qrId in list)
+      // reload list to show the new QR
       await loadList();
     } catch (err) {
       console.error("Create QR error:", err);
@@ -114,6 +120,10 @@ export default function App() {
 
   // Download QR PNG from dataUrl
   const downloadDataUrl = (dataUrl, filename = "qr.png") => {
+    if (!dataUrl) {
+      alert("No data available to download");
+      return;
+    }
     const a = document.createElement("a");
     a.href = dataUrl;
     a.download = filename;
@@ -124,6 +134,10 @@ export default function App() {
 
   // Print QR
   const printDataUrl = (dataUrl) => {
+    if (!dataUrl) {
+      alert("No data to print");
+      return;
+    }
     const w = window.open("");
     w.document.write(`<img src="${dataUrl}" onload="window.print();window.close()" />`);
     w.document.close();
@@ -224,14 +238,14 @@ export default function App() {
                   </thead>
                   <tbody>
                     {list.map((row) => (
-                      <tr key={row._id || row.qrId}>
+                      <tr key={row.qrId || row._id}>
                         <td>{row.companyName || "-"}</td>
                         <td>{row.extraFields?.location || "-"}</td>
                         <td>{row.extraFields?.purpose || "-"}</td>
                         <td>{formatDateIsoToDDMMYYYY(row.createdAt)}</td>
                         <td>
                           {row.scanHistory && row.scanHistory.length
-                            ? formatRelativeOrNever(row.scanHistory[row.scanHistory.length - 1].timestamp)
+                            ? formatRelativeOrNever(row.scanHistory[row.scanHistory.length - 1].time)
                             : "Never"}
                         </td>
                         <td>
@@ -308,14 +322,12 @@ export default function App() {
               <div className="modal-body two-col">
                 <div className="left">
                   <div className="qr-box">
-                    {/* build scan url using BASE */}
                     <img
                       src={`${detailRow?.dataUrl || ""}`}
                       alt="QR"
                       onError={(e) => {
-                        // if dataUrl not stored in list, generate URL based on BASE + qrId
                         if (detailRow.qrId) {
-                          e.target.src = `${API_BASE}/api/qrs/qr-image?qrId=${detailRow.qrId}`; // optional endpoint
+                          e.target.src = `${API_BASE}/api/qrs?qrId=${detailRow.qrId}`;
                         }
                       }}
                     />
@@ -345,7 +357,7 @@ export default function App() {
                   {detailRow.scanHistory && detailRow.scanHistory.length ? (
                     <ul className="history-list">
                       {detailRow.scanHistory.map((s, i) => (
-                        <li key={i}>{new Date(s.timestamp).toLocaleString()}</li>
+                        <li key={i}>{new Date(s.time).toLocaleString()}</li>
                       ))}
                     </ul>
                   ) : (
