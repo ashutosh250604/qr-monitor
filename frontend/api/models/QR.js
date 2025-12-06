@@ -1,4 +1,4 @@
-// api/models/QR.js
+// frontend/api/models/QR.js
 const mongoose = require('mongoose');
 
 const ScanSchema = new mongoose.Schema({
@@ -12,7 +12,9 @@ const QRSchema = new mongoose.Schema({
   companyName: { type: String, required: true },
   extraFields: { type: mongoose.Schema.Types.Mixed, default: {} },
   createdAt: { type: Date, default: Date.now },
-  expiresAt: { type: Date, required: true },
+  expiresAt: { type: Date, default: null },
+  expireDurationHours: { type: Number, default: 12 },
+  flagThresholdHours: { type: Number, default: 3 },
   scanHistory: { type: [ScanSchema], default: [] },
   flagged: { type: Boolean, default: false }
 });

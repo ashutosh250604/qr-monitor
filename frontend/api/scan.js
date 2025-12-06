@@ -4,7 +4,6 @@ const QR = require('./models/QR');
 const { setCorsHeaders, handlePreflight } = require('./_cors');
 
 module.exports = async (req, res) => {
-  // CORS
   setCorsHeaders(res, '*');
   if (handlePreflight(req, res)) return;
 
@@ -30,11 +29,15 @@ module.exports = async (req, res) => {
       return res.json({ ok: true, scans: docs });
     }
 
-    // record scan (default)
+    // record scan (default behaviour)
     const now = new Date();
-    if (now > qr.expiresAt) {
-      if (acceptJson) return res.json({ ok: false, message: 'QR expired' });
-      return res.send('<h2>QR expired</h2>');
+
+    // If this is the **first** scan and expiresAt is null, start expiry countdown now.
+    let firstScanStarted = false;
+    if (!qr.expiresAt) {
+      const duration = Number(qr.expireDurationHours || 12);
+      qr.expiresAt = new Date(now.getTime() + duration * 60 * 60 * 1000);
+      firstScanStarted = true;
     }
 
     const scanObj = {
@@ -47,12 +50,13 @@ module.exports = async (req, res) => {
     await qr.save();
 
     if (acceptJson) {
-      return res.json({ ok: true, scan: scanObj, scanCount: qr.scanHistory.length });
+      return res.json({ ok: true, scan: scanObj, scanCount: qr.scanHistory.length, firstScanStarted, expiresAt: qr.expiresAt });
     }
 
+    // default HTML response for scanner devices
     res.send(`<h2>Scan recorded for ${qr.companyName}</h2><p>Time: ${now.toISOString()}</p>`);
   } catch (err) {
-    console.error(err);
+    console.error('scan error:', err);
     if (acceptJson) return res.status(500).json({ error: 'Server error', details: err.message });
     return res.status(500).send('<h2>Server error</h2>');
   }

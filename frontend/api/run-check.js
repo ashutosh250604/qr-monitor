@@ -18,11 +18,12 @@ module.exports = async (req, res) => {
 
   try {
     const now = new Date();
-    const active = await QR.find({ expiresAt: { $gt: now }, flagged: false }).exec();
+    const active = await QR.find({ flagged: false }).exec();
     let flaggedCount = 0;
     for (const qr of active) {
-      const last = (qr.scanHistory && qr.scanHistory.length) ? qr.scanHistory[qr.scanHistory.length - 1].time : qr.createdAt;
-      if (now.getTime() - new Date(last).getTime() > 3 * 60 * 60 * 1000) {
+      const flagThreshold = Number(qr.flagThresholdHours || qr.flagThresholdHours === 0 ? qr.flagThresholdHours : 3);
+      const lastScanTime = (qr.scanHistory && qr.scanHistory.length) ? qr.scanHistory[qr.scanHistory.length - 1].time : qr.createdAt;
+      if (now.getTime() - new Date(lastScanTime).getTime() > flagThreshold * 60 * 60 * 1000) {
         qr.flagged = true;
         await qr.save();
         flaggedCount++;

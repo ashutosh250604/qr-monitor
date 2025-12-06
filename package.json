@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "mongoose": "^7.6.0",
+    "nanoid": "^4.0.0",
     "qrcode": "^1.5.1",
-    "nanoid": "^4.0.0"
+    "react-qr-code": "^2.0.18",
+    "uuid": "^13.0.0"
   }
 }
